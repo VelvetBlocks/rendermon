@@ -1,11 +1,14 @@
+require('dotenv').config();
 const axios = require('axios');
 const cron = require('node-cron');
+const http = require('http');
 
-// Configuration
+// Configuration from .env
 const RENDER_API_KEY = process.env.RENDER_API_KEY;
 const SERVICE_ID = process.env.RENDER_SERVICE_ID;
-const CHECK_INTERVAL = '*/10 * * * *'; // Run every 10 minutes
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
+const CHECK_INTERVAL = process.env.CHECK_INTERVAL || '*/10 * * * *';
+const PORT = process.env.PORT || 3000;
 
 async function checkBuildStatus() {
   try {
@@ -41,13 +44,22 @@ async function sendNotification(logs) {
 
   try {
     await axios.post(WEBHOOK_URL, message);
-    console.log('The notification sent');
+    console.log('Notification sent');
   } catch (error) {
-    console.error('Error sending the notification:', error);
+    console.error('Error sending notification:', error);
   }
 }
 
 // Schedule the check
 cron.schedule(CHECK_INTERVAL, checkBuildStatus);
 
-console.log('Render.com build status checker with integration is running...');
+// Create a simple HTTP server
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Render Log Forwarder is running');
+});
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log('Render.com build status checker with integration is running...');
+});
