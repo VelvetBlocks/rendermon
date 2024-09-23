@@ -10,19 +10,17 @@ const CHECK_INTERVAL = process.env.CHECK_INTERVAL || '*/10 * * * *';
 const PORT = process.env.PORT || 3000;
 
 async function checkBuildStatus() {
+  console.log('Checking build status...'); // Debug log
   try {
-    console.log('Connecting');
     const response = await axios.get(`https://api.render.com/v1/services/${SERVICE_ID}/deploys`, {
       headers: { 'Authorization': `Bearer ${RENDER_API_KEY}` }
     });
 
-    console.log(response);
-    
     const latestDeploy = response.data[0];
 
     if (latestDeploy.status === 'failed') {
       const logs = await fetchBuildLogs(latestDeploy.id);
-      await sendNotification(logs);
+      await sendWebhookNotification(logs);
     }
   } catch (error) {
     console.error('Error checking build status:', error);
@@ -36,7 +34,7 @@ async function fetchBuildLogs(deployId) {
   return response.data.build.log;
 }
 
-async function sendNotification(logs) {
+async function sendWebhookNotification(logs) {
   const message = {
     msg_type: "text",
     content: {
@@ -46,14 +44,16 @@ async function sendNotification(logs) {
 
   try {
     await axios.post(WEBHOOK_URL, message);
-    console.log('Notification sent');
+    console.log('Webhook notification sent');
   } catch (error) {
-    console.error('Error sending notification:', error);
+    console.error('Error sending webhook notification:', error);
   }
 }
 
 // Schedule the check
-cron.schedule(CHECK_INTERVAL, checkBuildStatus);
+const job = cron.schedule(CHECK_INTERVAL, checkBuildStatus, {
+  scheduled: false
+});
 
 // Create a simple HTTP server
 const server = http.createServer((req, res) => {
@@ -63,5 +63,16 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log('Render.com build status checker with integration is running...');
+  console.log('Render.com build status checker with webhook integration is running...');
+  job.start(); // Start the cron job after the server is running
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully.');
+  job.stop();
+  server.close(() => {
+    console.log('HTTP server closed.');
+    process.exit(0);
+  });
 });
