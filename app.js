@@ -11,10 +11,13 @@ const PORT = process.env.PORT || 3000;
 
 async function checkBuildStatus() {
   try {
+    console.log('Connecting');
     const response = await axios.get(`https://api.render.com/v1/services/${SERVICE_ID}/deploys`, {
       headers: { 'Authorization': `Bearer ${RENDER_API_KEY}` }
     });
 
+    console.log(response);
+    
     const latestDeploy = response.data[0];
 
     if (latestDeploy.status === 'failed') {
