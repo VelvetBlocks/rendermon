@@ -1,9 +1,8 @@
-require('dotenv').config();
 const axios = require('axios');
 const cron = require('node-cron');
 const http = require('http');
 
-// Configuration from .env
+// Configuration from environment variables
 const RENDER_API_KEY = process.env.RENDER_API_KEY;
 const SERVICE_ID = process.env.RENDER_SERVICE_ID;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
